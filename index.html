@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+<!-- Replace your existing viewport tag with this -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, shrink-to-fit=no">
+    <title>Business Manager | Track Collections & EMI</title>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.0/firebase-firestore-compat.js"></script>
+
+    <!-- External Libraries -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Local Files -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <!-- Firebase Configuration -->
+    <script src="firebase-config.js"></script>
+
+    <!-- Authentication Container -->
+    <div class="auth-container" id="authContainer">
+        <div class="auth-box">
+            <div class="auth-header">
+                <i class="fas fa-chart-line"></i>
+                <h2>Business Manager</h2>
+                <p>Track your business collections and EMI payments</p>
+            </div>
+
+            <!-- Tabs -->
+            <div class="auth-tabs">
+                <button class="auth-tab active" onclick="showLoginForm()">Login</button>
+                <button class="auth-tab" onclick="showSignupForm()">Sign Up</button>
+            </div>
+
+            <!-- Error Message -->
+            <div class="auth-error" id="authError"></div>
+
+            <!-- Login Form -->
+            <form class="auth-form active" id="loginForm" onsubmit="loginWithEmail(event)">
+                <div class="form-group">
+                    <label for="loginEmail">Email Address</label>
+                    <input type="email" id="loginEmail" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label for="loginPassword">Password</label>
+                    <input type="password" id="loginPassword" placeholder="Enter your password" required>
+                </div>
+                <button type="submit" class="auth-btn">
+                    <span class="btn-text">Login</span>
+                    <span class="btn-loader" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </button>
+                <p class="auth-footer">
+                    Don't have an account? <a href="#" onclick="showSignupForm()">Sign up here</a>
+                </p>
+            </form>
+
+            <!-- Signup Form -->
+            <form class="auth-form" id="signupForm" onsubmit="signupWithEmail(event)">
+                <div class="form-group">
+                    <label for="signupName">Full Name</label>
+                    <input type="text" id="signupName" placeholder="Enter your full name" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupEmail">Email Address</label>
+                    <input type="email" id="signupEmail" placeholder="Enter your email" required>
+                </div>
+                <div class="form-group">
+                    <label for="signupPassword">Password</label>
+                    <input type="password" id="signupPassword" placeholder="Create a password (min. 6 characters)"
+                        required>
+                </div>
+                <div class="form-group">
+                    <label for="confirmPassword">Confirm Password</label>
+                    <input type="password" id="confirmPassword" placeholder="Confirm your password" required>
+                </div>
+                <button type="submit" class="auth-btn">
+                    <span class="btn-text">Create Account</span>
+                    <span class="btn-loader" style="display: none;">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </span>
+                </button>
+                <p class="auth-footer">
+                    Already have an account? <a href="#" onclick="showLoginForm()">Login here</a>
+                </p>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Application Content -->
+    <div class="container" id="appContainer" style="display: none;">
+        <!-- Header -->
+        <header class="main-header">
+            <div class="header-left">
+                <h1><i class="fas fa-chart-line"></i> Business Manager</h1>
+                <p class="subtitle">Track daily collections & manage EMI payments</p>
+            </div>
+            <div class="user-info">
+                <div class="user-avatar" id="userAvatar">U</div>
+                <div class="user-details">
+                    <span id="userName">User</span>
+                    <button class="logout-btn" onclick="logoutUser()">
+                        <i class="fas fa-sign-out-alt"></i> Logout
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Dashboard -->
+        <div class="dashboard">
+            <div class="date-section">
+                <div class="current-date" id="currentDate"></div>
+                <div class="header-actions">
+                    <button class="btn-print" onclick="printReport()">
+                        <i class="fas fa-print"></i> Print
+                    </button>
+                </div>
+            </div>
+
+            <div class="stats-cards">
+                <div class="stat-card total-collection">
+                    <div class="stat-icon">
+                        <i class="fas fa-money-bill-wave"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Total Collection</h3>
+                        <p class="stat-value" id="totalCollection">₹0</p>
+                        <span class="stat-subtitle">This Month</span>
+                    </div>
+                </div>
+
+                <div class="stat-card monthly-profit">
+                    <div class="stat-icon">
+                        <i class="fas fa-chart-line"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Estimated Profit</h3>
+                        <p class="stat-value" id="monthlyProfit">₹0</p>
+                        <span class="stat-subtitle">30% Margin</span>
+                    </div>
+                </div>
+
+                <div class="stat-card pending-emi">
+                    <div class="stat-icon">
+                        <i class="fas fa-calendar-times"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Pending EMI</h3>
+                        <p class="stat-value" id="pendingEmi">₹0</p>
+                        <span class="stat-subtitle">This Month</span>
+                    </div>
+                </div>
+
+                <div class="stat-card net-balance">
+                    <div class="stat-icon">
+                        <i class="fas fa-balance-scale"></i>
+                    </div>
+                    <div class="stat-info">
+                        <h3>Net Balance</h3>
+                        <p class="stat-value" id="netBalance">₹0</p>
+                        <span class="stat-subtitle">After EMI</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Collections Section -->
+            <section class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-rupee-sign"></i> Daily Collections</h2>
+                    <button class="btn-add" onclick="showCollectionForm()">
+                        <i class="fas fa-plus"></i> Add Collection
+                    </button>
+                </div>
+
+                <!-- Collection Form -->
+                <!-- Replace your existing collection form with this -->
+<div class="form-card" id="collectionForm" style="display: none;">
+    <h3>Add Collection</h3>
+    <form id="addCollectionForm" onsubmit="addCollection(event)">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="collectionDate">Date</label>
+                <input type="date" id="collectionDate" required>
+            </div>
+            <div class="form-group">
+                <label for="collectionAmount">Amount (₹)</label>
+                <input type="number" id="collectionAmount" min="0" step="0.01" placeholder="0.00" required>
+            </div>
+        </div>
+        <!-- REMOVED: Source/Description field -->
+        <!-- REMOVED: Payment Mode field -->
+        <div class="form-actions">
+            <button type="submit" class="btn-primary">
+                <i class="fas fa-check"></i> Add
+            </button>
+            <button type="button" class="btn-secondary" onclick="hideCollectionForm()">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+        </div>
+    </form>
+</div>
+
+                <!-- Collections Table -->
+                <div class="table-container">
+                    <div class="table-responsive">
+                        <table id="collectionsTable">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Amount</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="collectionsList">
+                                <tr>
+                                    <td colspan="5" class="empty-state">
+                                        <i class="fas fa-receipt"></i>
+                                        <p>No collections yet</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                          <tfoot>
+    <tr>
+        <td colspan="2" class="table-summary">
+            <strong>Total Collections:</strong>
+            <span id="collectionsTotal">₹0</span>
+        </td>
+        <td class="table-summary">
+            <strong>Estimated Profit (30%):</strong>
+            <span id="collectionsProfit">₹0</span>
+        </td>
+    </tr>
+</tfoot>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- EMI Section -->
+            <section class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-calendar-alt"></i> EMI Management</h2>
+                    <button class="btn-add" onclick="showEMIForm()">
+                        <i class="fas fa-plus"></i> Add EMI
+                    </button>
+                </div>
+
+                <!-- EMI Form -->
+                <div class="form-card" id="emiForm" style="display: none;">
+                    <h3>Add EMI</h3>
+                    <form id="addEMIForm" onsubmit="addEMI(event)">
+                        <div class="form-group">
+                            <label for="emiName">EMI Name</label>
+                            <input type="text" id="emiName" placeholder="Car Loan, Home Loan, Credit Card, etc."
+                                required>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="emiAmount">EMI Amount (₹)</label>
+                                <input type="number" id="emiAmount" min="0" step="0.01" placeholder="0.00" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="emiDueDate">Due Date</label>
+                                <input type="number" id="emiDueDate" min="1" max="31" placeholder="Day of month"
+                                    required>
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="emiStartDate">Start Date</label>
+                                <input type="date" id="emiStartDate" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="emiTotalMonths">Total Months</label>
+                                <input type="number" id="emiTotalMonths" min="1" placeholder="12" required>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">
+                                <i class="fas fa-check"></i> Add
+                            </button>
+                            <button type="button" class="btn-secondary" onclick="hideEMIForm()">
+                                <i class="fas fa-times"></i> Cancel
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- EMI Table -->
+                <div class="table-container">
+                    <div class="table-responsive">
+                        <table id="emiTable">
+                            <thead>
+                                <tr>
+                                    <th>EMI Name</th>
+                                    <th>Amount</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="emiList">
+                                <tr>
+                                    <td colspan="5" class="empty-state">
+                                        <i class="fas fa-credit-card"></i>
+                                        <p>No EMI records yet</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                            <tfoot>
+                                <tr>
+                                    <td colspan="3" class="table-summary">
+                                        <strong>Total EMI:</strong>
+                                        <span id="emiTotal">₹0</span>
+                                    </td>
+                                    <td colspan="2" class="table-summary">
+                                        <strong>Completed:</strong>
+                                        <span id="emiCompleted">0</span>
+                                        <strong class="ml-3">Pending:</strong>
+                                        <span id="emiPending">0</span>
+                                    </td>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Charts Section -->
+        <section class="charts-section">
+            <h2><i class="fas fa-chart-pie"></i> Monthly Overview</h2>
+            <div class="charts-container">
+                <div class="chart-card">
+                    <h3>Collections vs EMI</h3>
+                    <canvas id="collectionEmiChart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Profit Breakdown</h3>
+                    <canvas id="profitChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <p>Business Manager &copy; <span id="currentYear"></span> | All data stored securely in Firebase</p>
+        </footer>
+    </div>
+
+    <!-- Modal for EMI Status -->
+    <div class="modal" id="emiModal" style="display: none;">
+        <div class="modal-content">
+            <h3>Update EMI Status</h3>
+            <p id="modalEmiDetails"></p>
+            <div class="modal-actions">
+                <button class="btn-primary" onclick="confirmEMIPayment()">
+                    <i class="fas fa-check"></i> Mark as Paid
+                </button>
+                <button class="btn-secondary" onclick="closeModal()">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toastContainer"></div>
+
+    <!-- JavaScript -->
+    <script src="script.js"></script>
+</body>
+
+</html>
